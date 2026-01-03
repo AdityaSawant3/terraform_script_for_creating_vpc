@@ -36,3 +36,6 @@ variable "internet_access" {
 variable "ssh_key" {
     type = string
 }
+variable "my_ip" {
+    type = string
+}

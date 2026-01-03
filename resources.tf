@@ -4,6 +4,8 @@ resource "aws_instance" "web" {
   subnet_id = aws_subnet.public_subnet.id
   vpc_security_group_ids = [aws_security_group.public_instance_ssh.id]
 
+  # Public instance requires the ssh key to connect.
+  key_name = var.ssh_key
   tags = {
     Name = "Public-Instance"
   }
@@ -106,7 +108,7 @@ resource "aws_security_group" "private_instance_ssh" {
 resource "aws_vpc_security_group_ingress_rule" "ssh" {
   security_group_id = aws_security_group.public_instance_ssh.id
 
-  cidr_ipv4   = var.internet_access
+  cidr_ipv4   = var.my_ip
   from_port   = 22
   ip_protocol = "tcp"
   to_port     = 22
@@ -117,8 +119,25 @@ resource "aws_security_group_rule" "private_ssh_from_public" {
   from_port         = 22
   to_port           = 22
   protocol          = "tcp"
+# Dont specify vpc cidr here.
   security_group_id = aws_security_group.private_instance_ssh.id
   source_security_group_id = aws_security_group.public_instance_ssh.id
+}
+
+# Outbound access for both the subnets.
+
+resource "aws_vpc_security_group_egress_rule" "public_instance_outbound" {
+  security_group_id = aws_security_group.public_instance_ssh.id
+
+  cidr_ipv4   = var.internet_access
+  ip_protocol = "-1"
+}
+
+resource "aws_vpc_security_group_egress_rule" "private_instance_outbound" {
+  security_group_id = aws_security_group.private_instance_ssh.id
+  cidr_ipv4   = var.internet_access
+  ip_protocol = "-1"
+ 
 }
 
 # Elastic IP creation.
@@ -160,7 +179,7 @@ resource "aws_route_table" "private_rt" {
 }
 
 # Associate Private subnets to the route_table.
-resource "aws_route_table_association" "a" {
+resource "aws_route_table_association" "private_assocaition" {
   subnet_id      = aws_subnet.private_subnet.id
   route_table_id = aws_route_table.private_rt.id
 }
